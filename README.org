@@ -1,0 +1,18 @@
+* Installation
+  Add these lines to your emacs init file :
+#+begin_src elisp
+ (add-to-list 'load-path "~/<path-to-wicd-mode>/")
+ (require 'wicd-mode)
+#+end_src
+
+  Run this programme by the command
+  =M-x wicd=
+
+* Description
+  Wicd (https://launchpad.net/wicd), is a popular network communication manager for linux. It is composed of a daemon running as root and of clients running as unprivileged users daemon and clients communicate by the D-Bus (http://www.freedesktop.org/wiki/Software/dbus) message bus system. This file implements a Wicd client for Emacs using the D-Bus binding for Emacs Lisp.
+
+* Compatibility
+  GNU Emacs with D-Bus binding (version 23 or higher)
+
+* Contact
+  Please send me (cauderlier@crans.org) any comment, bug, or feature request!
