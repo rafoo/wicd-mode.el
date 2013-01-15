@@ -143,9 +143,34 @@ OBJ is one of :deamon, :wired or :wireless"
   (wicd-method :wireless "GetNumberOfNetworks")
   )
 
+(defun wicd-dbus-wireless-prop (id prop)
+  "Ask the WICD daemon for the value of the property PROP of wireless network ID."
+  (wicd-method-arg :wireless "GetWirelessProperty" id prop)
+  )
+
+(defvar wicd-wireless-list nil
+  "The list of available wireless networks.
+Each element is an alist"
+  )
+
+(defun wicd-wireless-list ()
+  "Fill the variable `wicd-wireless-list'."
+  (let ((i 0)
+        (n (wicd-wireless-nb))
+        network)
+    (while (< i n)
+      (setq network nil)
+      (dolist (prop '("essid" "bssid" "channel" "quality"))
+        (setq network (plist-put network prop (wicd-dbus-wireless-prop i prop))))
+      (add-to-list 'wicd-wireless-list (cons i network))
+      (setq i (+ 1 i))
+      )
+    wicd-wireless-list))
+
+
 (defun wicd-wireless-prop (id prop)
   "Return property PROP of wireless network ID"
-  (wicd-method-arg :wireless "GetWirelessProperty" id prop)
+  (lax-plist-get (cdr (assoc id wicd-wireless-list)) prop)
   )
 
 (defun wicd-wireless-format ()
