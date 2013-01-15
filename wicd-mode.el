@@ -136,8 +136,6 @@ OBJ is one of :deamon, :wired or :wireless"
          l)
   )
 
-;; Managing the list of available wireless connections
-
 (defun wicd-wireless-nb ()
   "Return the number of available connections."
   (wicd-method :wireless "GetNumberOfNetworks")
@@ -147,6 +145,25 @@ OBJ is one of :deamon, :wired or :wireless"
   "Ask the WICD daemon for the value of the property PROP of wireless network ID."
   (wicd-method-arg :wireless "GetWirelessProperty" id prop)
   )
+
+(defun wicd-wireless-connected ()
+  "Id of the current connection."
+  (wicd-method-arg :wireless "GetCurrentNetworkID")
+  )
+
+(defun wicd-wireless-connect (n)
+  "Try to connect to wireless network number N"
+  (interactive "nWireless network id: ")
+  (wicd-method-arg :wireless "ConnectWireless" n)
+  )
+
+(defun wicd-wireless-disconnect ()
+  "Disconnect from the current wireless network"
+  (interactive)
+  (wicd-method :wireless "DisconnectWireless")
+  )
+
+;; Managing the list of available wireless connections
 
 (defvar wicd-wireless-list nil
   "The list of available wireless networks.
@@ -169,16 +186,21 @@ Each element is an alist"
 
 
 (defun wicd-wireless-prop (id prop)
-  "Return property PROP of wireless network ID"
+  "Return property PROP of wireless network ID."
   (lax-plist-get (cdr (assoc id wicd-wireless-list)) prop)
   )
+
+
+
+
+;;; Major Mode
 
 (defun wicd-wireless-format ()
   (apply 'concat (mapcar 'cadr wicd-wireless-prop-list))
   )
 
 (defun wicd-wireless-header-string ()
-  "String put in the header-line"
+  "String put in the header-line."
   (concat (propertize " " 'display '((space :align-to 0)))
           "#  "
           (apply 'format (wicd-wireless-format)
@@ -191,10 +213,6 @@ Each element is an alist"
   (setq header-line-format (wicd-wireless-header-string))
   )
 
-(defun wicd-wireless-connected ()
-  "Id of the current connection."
-  (wicd-method-arg :wireless "GetCurrentNetworkID")
-  )
 
 (defun wicd-wireless-display ()
   "Redisplay wireless network list"
@@ -226,17 +244,13 @@ Each element is an alist"
     )
   )
 
-(defun wicd-wireless-disconnect ()
-  "Disconnect from the current wireless network"
+(defun wicd-wireless-refresh ()
+  "Refresh and redisplay available wireless networks"
   (interactive)
-  (wicd-method :wireless "DisconnectWireless")
+  (wicd-method :wireless "Scan")
+  (wicd-wireless-display)
   )
 
-(defun wicd-wireless-connect (n)
-  "Try to connect to wireless network number N"
-  (interactive "nWireless network id: ")
-  (wicd-method-arg :wireless "ConnectWireless" n)
-  )
 
 (defun wicd-wireless-connect-current-line ()
   "Try to connect to wireless network displayed on the current line of the wicd buffer"
@@ -248,14 +262,8 @@ Each element is an alist"
     )
   )
 
-(defun wicd-wireless-refresh ()
-  "Refresh and redisplay available wireless networks"
-  (interactive)
-  (wicd-method :wireless "Scan")
-  (wicd-wireless-display)
-  )
-
 ;; Mode definition
+
 (defcustom wicd-mode-map
   (let ((map (make-sparse-keymap)))
     (set-keymap-parent map special-mode-map)
