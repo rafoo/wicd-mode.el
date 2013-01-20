@@ -4,7 +4,7 @@
 
 ;;; Author: Raphaël Cauderlier <cauderlier@crans.org>
 
-;;; Version: 1.1
+;;; Version: 1.2
 
 ;; This file is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -26,7 +26,7 @@
 ;;; Commentary:
 ;; Installation:
 ;; Add these lines to your emacs init file :
-; (add-to-list 'load-path "~/<path-to-wicd-mode>/")
+; (add-to-list 'load-path "<path-to-wicd-mode>/")
 ; (require 'wicd-mode)
 
 ;; run this programme by the command
@@ -49,8 +49,7 @@
 
 ;; Customization
 
-(defgroup wicd
-  nil
+(defgroup wicd nil
   "Elisp client application for the wicd network connection manager."
   :group 'applications
   )
@@ -60,8 +59,7 @@
   :group 'wicd
   )
 
-(defgroup wicd-dbus
-  nil
+(defgroup wicd-dbus nil
   "Parameters for communication with wicd-daemon using D-Bus."
   :group 'wicd
 )
@@ -76,14 +74,16 @@
   :group 'wicd-dbus
   )
 
-(defgroup wicd-wireless
-  nil
+(defgroup wicd-wireless nil
   "Display of the list of available wireless connections."
   :group 'wicd
   )
 
 (defcustom wicd-wireless-prop-list
-  '(("essid" "%-24s ") ("bssid" "%17s ") ("channel" "%-7s ") ("quality" "%-3s%%"))
+  '(("essid" "%-24s ")
+    ("bssid" "%17s ")
+    ("channel" "%-7s ")
+    ("quality" "%-3s%%"))
   "List of displayed fields with their corresponding format strings."
   :group 'wicd-wireless
   )
@@ -93,6 +93,24 @@
   "Regexp used as a filter to select meaningfull ESSID."
   :group 'wicd-wireless
   :type 'string
+  )
+
+(defcustom wicd-wireless-scan-hook
+  'wicd-wireless-display
+  "Hook run when the daemon signals that the scan is finished."
+  )
+
+(defgroup wicd-global-mode nil
+  "Global minor mode for managing network connections on the mode-line using wicd."
+  :group 'wicd
+  :group 'mode-line
+  )
+
+(defcustom wicd-global-mode-string
+  (concat " " (propertize "Wicd" 'help-echo "Help") " ")
+  "Text shown in the mode line when `wicd-global-mode' is active."
+  :group 'wicd-global-mode
+  :risky t
   )
 
 ;; Communication with wicd-daemon via D-BUS
@@ -105,7 +123,7 @@ OBJ is one of :deamon, :wired or :wireless"
     (:wired (concat wicd-dbus-name ".wired"))
     (:wireless (concat wicd-dbus-name ".wireless"))
     ))
-(defun wicd-dbus-path (OBJ)
+(defun wicd-dbus-path (obj)
   "return path of dbus object OBJ
 OBJ is one of :deamon, :wired or :wireless"
   (case obj
@@ -163,6 +181,11 @@ OBJ is one of :deamon, :wired or :wireless"
   (wicd-method :wireless "DisconnectWireless")
   )
 
+(defun wicd-wireless-scan ()
+  "Ask the daemon to rescan available wireless networks."
+  (wicd-method :wireless "Scan")
+  )
+
 ;; Managing the list of available wireless connections
 
 (defvar wicd-wireless-list nil
@@ -172,6 +195,7 @@ Each element is an alist"
 
 (defun wicd-wireless-list ()
   "Fill the variable `wicd-wireless-list'."
+  (setq wicd-wireless-list nil)
   (let ((i 0)
         (n (wicd-wireless-nb))
         network)
@@ -217,39 +241,46 @@ Each element is an alist"
 (defun wicd-wireless-display ()
   "Redisplay wireless network list"
   (interactive)
-  (switch-to-buffer wicd-buffer-name)
-  (save-excursion
-    (let ((buffer-read-only))
-      (erase-buffer)
-      (wicd-wireless-header)
-      (let ((i 0)
-            (n (wicd-wireless-nb))
-            start)
-        (while (< i n)
-          (let ((essid (wicd-wireless-prop i "essid")))
-            (when (string-match wicd-wireless-filter essid)
-              (setq start (point))
-              (insert (format "%-2d " i))
-              (insert (apply 'format (wicd-wireless-format)
-                             (mapcar (lambda (a)
-                                       (wicd-wireless-prop i (car a)))
-                                     wicd-wireless-prop-list
-                                     )))
-              (when (= (wicd-wireless-connected) i)
-                (overlay-put (make-overlay start (point)) 'face 'bold)
-                )
-              (insert "\n")
-              (setq i (+ 1 i))
-              )))))
+  (wicd-wireless-list)
+  (with-current-buffer wicd-buffer-name
+    (save-excursion
+      (let ((buffer-read-only))
+        (erase-buffer)
+        (wicd-wireless-header)
+        (let ((i 0)
+              (n (length wicd-wireless-list))
+              start)
+          (while (< i n)
+            (let ((essid (wicd-wireless-prop i "essid")))
+              (when (string-match wicd-wireless-filter essid)
+                (setq start (point))
+                (insert (format "%-2d " i))
+                (insert (apply 'format (wicd-wireless-format)
+                               (mapcar (lambda (a)
+                                         (wicd-wireless-prop i (car a)))
+                                       wicd-wireless-prop-list
+                                       )))
+                (when (= (wicd-wireless-connected) i)
+                  (overlay-put (make-overlay start (point)) 'face 'bold)
+                  )
+                (insert "\n")))
+            (setq i (+ 1 i))
+            )
+          )
+        )
+      )
     )
   )
 
 (defun wicd-wireless-refresh ()
   "Refresh and redisplay available wireless networks"
   (interactive)
-  (wicd-method :wireless "Scan")
+  (wicd-wireless-scan)
+  (pop-to-buffer wicd-buffer-name)
   (wicd-wireless-display)
   )
+
+
 
 
 (defun wicd-wireless-connect-current-line ()
@@ -297,6 +328,73 @@ Each element is an alist"
   (run-with-timer 5 nil 'wicd-wireless-refresh)
 )
 
-(provide 'wicd-mode)
+;; Global Minor Mode for the mode-line 
 
+(define-minor-mode wicd-global-mode
+  "Toggle Wicd global mode.
+Interactively with no argument, this command toggles the mode.
+A positive prefix argument enables the mode, any other prefix
+argument disables it.  From Lisp, argument omitted or nil enables
+the mode, `toggle' toggles the state.
+
+When Wicd global mode is enabled, the mode-line shows a menu to
+manage network connections. See also the command `wicd'."
+  nil
+  " Wicd"
+  nil
+  :global t
+  :group 'wicd-global-mode
+  (or global-mode-string (setq global-mode-string '("")))
+  (when wicd-global-mode
+    (or (memq 'wicd-global-mode-string global-mode-string)
+        (setq global-mode-string
+              (append global-mode-string '(wicd-global-mode-string))))
+    )
+  )
+
+;; TODO
+;; Minor mode menu
+(defun wicd-wireless-menu-refresh
+  (wicd-wireless-scan))
+
+(defvar wicd-global-mode-keymap
+  (make-sparse-keymap "Wicd")
+  "Keymap for Wicd global minor mode.")
+
+(setq wicd-global-mode-keymap (make-sparse-keymap "Wicd")) ;; debug
+
+(add-to-list 'minor-mode-map-alist `(wicd-global-mode . ,wicd-global-mode-keymap)) ;; minor mode keymap is active when minor mode is
+
+;; Minor mode menu
+(define-key wicd-global-mode-keymap [menu-bar wicd]
+  `(menu-item "Wicd" ,(make-sparse-keymap) :key-sequence nil))
+
+(define-key wicd-global-mode-keymap [menu-bar wicd networks]
+  `(menu-item "Networks" ,(make-sparse-keymap) :key-sequence nil))
+
+(define-key wicd-global-mode-keymap [menu-bar wicd networks refresh]
+  `(menu-item "Refresh" wicd-wireless-menu-refresh))
+
+
+(define-key wicd-global-mode-keymap [menu-bar wicd networks 0]
+  `(menu-item "Id0" nil :key-sequence nil))
+(define-key wicd-global-mode-keymap [menu-bar wicd networks 1]
+  `(menu-item "Id1" nil :key-sequence nil))
+(define-key wicd-global-mode-keymap [menu-bar wicd networks 2]
+  `(menu-item "Id2" nil :key-sequence nil))
+
+
+
+;; Run a hook when scan is finished
+
+(dbus-register-signal
+ :system
+ wicd-dbus-name
+ (wicd-dbus-path :wireless)
+ (wicd-dbus-name :wireless)
+ "SendEndScanSignal"
+ wicd-wireless-scan-hook)
+
+
+(provide 'wicd-mode)
 ;;; wicd-mode.el ends here.
