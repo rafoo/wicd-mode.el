@@ -222,31 +222,33 @@ Each element is an alist")
     (with-current-buffer wicd-buffer-name
       (save-excursion
         (let ((buffer-read-only))
+          (setq header-line-format)
           (erase-buffer)
           (if wicd-wireless-scanning
               (insert "Scanning...")
             (progn
-              (wicd-wireless-header) ;; generate the header line
               (wicd-wireless-list) ;; fill the list with informations from the daemon
               (let ((i 0)
                     (n (length wicd-wireless-list))
                     start)
                 (if (= n 0)
                     (insert "No wireless network found.")
-                  (while (< i n)
-                    (let ((essid (wicd-wireless-prop i "essid")))
-                      (when (string-match wicd-wireless-filter essid)
-                        (setq start (point))
-                        (insert (apply 'format (wicd-wireless-format)
-                                       (mapcar (lambda (a)
-                                                 (wicd-wireless-prop i (car a)))
-                                               wicd-wireless-prop-list
-                                               )))
-                        (when (= (wicd-wireless-connected) i)
-                          (overlay-put (make-overlay start (point)) 'face 'bold)
-                          )
-                        (insert "\n")))
-                    (setq i (+ 1 i))))))))))))
+                  (progn
+                    (wicd-wireless-header) ;; generate the header line
+                    (while (< i n)
+                      (let ((essid (wicd-wireless-prop i "essid")))
+                        (when (string-match wicd-wireless-filter essid)
+                          (setq start (point))
+                          (insert (apply 'format (wicd-wireless-format)
+                                         (mapcar (lambda (a)
+                                                   (wicd-wireless-prop i (car a)))
+                                                 wicd-wireless-prop-list
+                                                 )))
+                          (when (= (wicd-wireless-connected) i)
+                            (overlay-put (make-overlay start (point)) 'face 'bold)
+                            )
+                          (insert "\n")))
+                      (setq i (+ 1 i)))))))))))))
 
 (defun wicd-wireless-connect-current-line ()
   "Try to connect to wireless network displayed on the current line of the wicd buffer"
