@@ -14,5 +14,6 @@
 * Compatibility
   GNU Emacs with D-Bus binding (version 23 or higher)
 
+* Known Issues
 * Contact
   Please send me (cauderlier@crans.org) any comment, bug, or feature request!
