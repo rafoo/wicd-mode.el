@@ -339,9 +339,15 @@ manage network connections. See also the command `wicd'."
       wicd-global-mode-keymap
       "Some doc"
       `("Wicd"
-        ["Scan" wicd-wireless-scan t]
-        ["Disconnect" wicd-wireless-disconnect t]
-        ("Networks" . ,l))))
+        ["Scan"
+         wicd-wireless-scan
+         (not wicd-wireless-scanning)]
+        ["Disconnect"
+         wicd-wireless-disconnect
+         (> (wicd-wireless-connected) (- 1))]
+        ,(if l
+             (cons "Networks" l)
+           ["Networks" nil nil]))))
   (add-to-list 'minor-mode-map-alist
                `(wicd-global-mode . ,wicd-global-mode-keymap)) ;; minor mode keymap is active when minor mode is
   )
