@@ -340,7 +340,6 @@ manage network connections. See also the command `wicd'."
       "Some doc"
       `("Wicd"
         ["Scan" wicd-wireless-scan t]
-        ["Refresh" wicd-menu-refresh t]
         ("Networks" . ,l))))
   (add-to-list 'minor-mode-map-alist
                `(wicd-global-mode . ,wicd-global-mode-keymap)) ;; minor mode keymap is active when minor mode is
