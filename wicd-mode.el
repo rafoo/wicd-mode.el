@@ -100,7 +100,7 @@
   "Whether we are waiting for Wicd daemon to finish the scanning of available networks.")
 
 (defcustom wicd-wireless-scan-hook
-  '(wicd-wireless-display)
+  '(wicd-wireless-display wicd-menu-refresh)
   "Hook run when the daemon signals that the scan is finished."
   :type 'hook
   )
@@ -316,11 +316,10 @@ manage network connections. See also the command `wicd'."
 
 (setq wicd-global-mode-keymap (make-sparse-keymap "Wicd")) ;; debug
 
-(add-to-list 'minor-mode-map-alist `(wicd-global-mode . ,wicd-global-mode-keymap)) ;; minor mode keymap is active when minor mode is
 
 ;; Minor mode menu
 
-(defun wicd-easy-menu-refresh ()
+(defun wicd-menu-refresh ()
   (interactive)
   (let (l
         (i (- (length wicd-wireless-list) 1)))
@@ -336,11 +335,16 @@ manage network connections. See also the command `wicd'."
         )
       )
     (easy-menu-define
-      wicd-easy-menu
+      nil
       wicd-global-mode-keymap
       "Some doc"
       `("Wicd"
-        ("Networks" . ,l)))))
+        ["Scan" wicd-wireless-scan t]
+        ["Refresh" wicd-menu-refresh t]
+        ("Networks" . ,l))))
+  (add-to-list 'minor-mode-map-alist
+               `(wicd-global-mode . ,wicd-global-mode-keymap)) ;; minor mode keymap is active when minor mode is
+  )
 
 ;; Run a hook when scan is finished
 
