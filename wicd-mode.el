@@ -25,7 +25,7 @@
 
 ;;; Commentary:
 ;; Installation:
-;; Add these lines to your emacs init file :
+;; Add these lines to your Emacs init file :
 ; (add-to-list 'load-path "<path-to-wicd-mode>/")
 ; (require 'wicd-mode)
 
@@ -34,11 +34,11 @@
 
 ;; Description:
 ;; Wicd (https://launchpad.net/wicd), is a popular network
-;; communication manager for linux. It is composed of a daemon
+;; communication manager for linux.  It is composed of a daemon
 ;; running as root and of clients running as unprivileged users
-;; daemon and clients communicate by the D-Bus 
+;; daemon and clients communicate by the D-Bus
 ;; (http://www.freedesktop.org/wiki/Software/dbus) message bus
-;; system. This file implements a Wicd client for Emacs using
+;; system.  This file implements a Wicd client for Emacs using
 ;; the D-Bus binding for Emacs Lisp.
 
 ;; Compatibility: GNU Emacs with D-Bus binding (version 23 or higher)
@@ -114,7 +114,7 @@
 ;; Communication with wicd-daemon via D-BUS
 
 (defun wicd-dbus-name (obj)
-  "return name of dbus object OBJ
+  "Return name of dbus object OBJ.
 OBJ is one of :deamon, :wired or :wireless"
   (cond
     ((eq obj :daemon) wicd-dbus-name)
@@ -122,7 +122,7 @@ OBJ is one of :deamon, :wired or :wireless"
     ((eq obj :wireless) (concat wicd-dbus-name ".wireless"))
     ))
 (defun wicd-dbus-path (obj)
-  "return path of dbus object OBJ
+  "Return path of dbus object OBJ.
 OBJ is one of :deamon, :wired or :wireless"
   (cond
     ((eq obj :daemon) wicd-dbus-path)
@@ -131,8 +131,10 @@ OBJ is one of :deamon, :wired or :wireless"
     ))
 
 (defun wicd-method (obj method &rest l)
-  "Call METHOD of object OBJ with argument list L
-OBJ is one of :deamon, :wired or :wireless"
+  "Call a dbus wicd method with arguments.
+OBJ is one of :deamon, :wired or :wireless,
+METHOD is a string, the name of a method of the DBus object OBJ,
+L is a list of arguments to pass to METHOD."
   (apply 'dbus-call-method
          :system
          wicd-dbus-name
@@ -146,7 +148,9 @@ OBJ is one of :deamon, :wired or :wireless"
   (wicd-method :wireless "GetNumberOfNetworks"))
 
 (defun wicd-dbus-wireless-prop (id prop)
-  "Ask the WICD daemon for the value of the property PROP of wireless network ID."
+  "Ask the Wicd daemon for the value of a property.
+ID is a wireless network id (an integer),
+PROP is a string, the name of the property."
   (wicd-method :wireless "GetWirelessProperty" id prop))
 
 (defun wicd-wireless-connected ()
@@ -154,12 +158,12 @@ OBJ is one of :deamon, :wired or :wireless"
   (wicd-method :wireless "GetCurrentNetworkID"))
 
 (defun wicd-wireless-connect (n)
-  "Try to connect to wireless network number N"
+  "Try to connect to wireless network number N."
   (interactive "nWireless network id: ")
   (wicd-method :wireless "ConnectWireless" n))
 
 (defun wicd-wireless-disconnect ()
-  "Disconnect from the current wireless network"
+  "Disconnect from the current wireless network."
   (interactive)
   (wicd-method :wireless "DisconnectWireless"))
 
@@ -193,6 +197,11 @@ Each element is an alist")
 
 
 (defun wicd-wireless-prop (id prop)
+  "Like `wicd-dbus-wireless-prop' but using a cache.
+This function returns the same value than `wicd-dbus-wireless-prop'
+but reads it in `wicd-wireless-list' instead of asking the deamon.
+ID is a wireless network id (an integer),
+PROP is a string, the name of the property."
   "Return property PROP of wireless network ID."
   (lax-plist-get (cdr (assoc id wicd-wireless-list)) prop))
 
@@ -202,6 +211,7 @@ Each element is an alist")
 ;;; Major Mode
 
 (defun wicd-wireless-format ()
+  "Format string for the header line in wicd-mode."
   (apply 'concat (mapcar 'cadr wicd-wireless-prop-list)))
 
 (defun wicd-wireless-header-string ()
@@ -211,18 +221,18 @@ Each element is an alist")
                  (mapcar 'car wicd-wireless-prop-list))))
 
 (defun wicd-wireless-header ()
-  "Set the header-line to wicd-wireless-header-string"
+  "Set the header-line to wicd-wireless-header-string."
   (setq header-line-format (wicd-wireless-header-string)))
 
 
 (defun wicd-wireless-display ()
-  "Redisplay wireless network list"
+  "Redisplay wireless network list."
   (interactive)
   (when (get-buffer wicd-buffer-name)
     (with-current-buffer wicd-buffer-name
       (save-excursion
         (let ((buffer-read-only))
-          (setq header-line-format)
+          (setq header-line-format nil)
           (erase-buffer)
           (if wicd-wireless-scanning
               (insert "Scanning...")
@@ -251,7 +261,7 @@ Each element is an alist")
                       (setq i (+ 1 i)))))))))))))
 
 (defun wicd-wireless-connect-current-line ()
-  "Try to connect to wireless network displayed on the current line of the wicd buffer"
+  "Try to connect to wireless network displayed on the current line of the wicd buffer."
   (interactive)
   (let* ((id (- (line-number-at-pos) 1))
          (network (wicd-wireless-prop id "essid")))
@@ -292,7 +302,7 @@ Each element is an alist")
   (wicd-mode)
   (run-with-timer 5 nil 'wicd-wireless-scan))
 
-;; Global Minor Mode for the mode-line 
+;; Global Minor Mode for the mode-line
 
 (define-minor-mode wicd-global-mode
   "Toggle Wicd global mode.
@@ -320,6 +330,7 @@ manage network connections. See also the command `wicd'."
 ;; Minor mode menu
 
 (defun wicd-menu-refresh ()
+  "Regenarate the menu for wicd global minor mode."
   (interactive)
   (let (l
         (i (- (length wicd-wireless-list) 1)))
@@ -366,4 +377,4 @@ manage network connections. See also the command `wicd'."
 
 
 (provide 'wicd-mode)
-;;; wicd-mode.el ends here.
+;;; wicd-mode.el ends here
