@@ -235,10 +235,9 @@ Each element is an alist")
         network)
     (while (< i n)
       (setq network (plist-put nil "id" i))
-      (dolist (prop (cdr (wicd-wireless-prop-names)))
+      (dolist (prop '("essid" "bssid" "channel" "quality"))
         (setq network (plist-put network prop (wicd-dbus-wireless-prop i prop))))
       (add-to-list 'wicd-wireless-list (cons i network))
-      (prin1 network)
       (setq i (+ 1 i))
       )
     wicd-wireless-list))
@@ -289,20 +288,14 @@ Each element is an alist")
   :group 'wicd
   )
 
-(defun wicd-wireless-cell (cell)
-  "Ignore CELL."
-  (when cell
-    (cons (format "%s" (cadr cell)) (wicd-wireless-cell (cddr cell)))))
-
 (defun wicd-fill ()
   "Fill wicd-wireless-list."
-;  (wicd-wireless-list)
   (mapcar
    (lambda (x)
      (let ((i (car x))
            (cell (cdr x)))
        (list i
-             (apply 'vector (wicd-wireless-cell cell)))))
+             (apply 'vector cell))))
    wicd-wireless-list))
 
 
