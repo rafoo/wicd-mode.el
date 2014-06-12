@@ -114,11 +114,24 @@ Next elements are a plist whose keys are
   "Compares the ids of entries A and B."
   (< (car a) (car b)))
 
+(defun wicd-num-comp (a b)
+  "Compares strings A and B as numbers.
+If A or B is a list, take its car instead."
+  (let ((as (if (stringp a) a (car a)))
+        (bs (if (stringp b) b (car b))))
+    (< (string-to-number as)
+       (string-to-number bs))))
+
 (defun wicd-num-entry-comp (a b)
   "Compares entries A and B by their Ith field as a number."
   (let ((i (tabulated-list--column-number (car tabulated-list-sort-key))))
-    (< (string-to-number (aref (cadr a) i))
-       (string-to-number (aref (cadr b) i)))))
+    (wicd-num-comp (aref (cadr a) i) (aref (cadr b) i))))
+
+(defface wicd-connected-face '((t . (:weight bold)))
+  "Face used to displayed connected network line.")
+
+(defface wicd-not-connected-face '((t . nil))
+  "Face used to displayed non connected network lines.")
 
 (defun wicd-wireless-prop-tabulated (name plist)
   "Convert an element of `wicd-wireless-prop-list' into a list used for building `tabulated-list-format'."
@@ -302,6 +315,11 @@ Each element is an alist")
    (lambda (x)
      (let ((i (car x))
            (cell (cdr x)))
+       (when (and wicd-wireless-connected
+                  (= wicd-wireless-connected i))
+         (setq cell (mapcar
+                     (lambda (s) (list s 'face 'wicd-connected-face))
+                     cell)))
        (list i
              (apply 'vector cell))))
    wicd-wireless-list))
@@ -416,6 +434,24 @@ manage network connections. See also the command `wicd'."
        (erase-buffer)
        (insert "Scanning…\n")))))
 
+(defvar wicd-wireless-connected nil
+  "Id of the currently-connected network.")
+
+(defun wicd-wireless-emphase-network ()
+  "Emphase the line of connected wireless network."
+  (setq wicd-wireless-connected (wicd-wireless-connected))
+  (wicd-wireless-display))
+
+(dbus-register-signal
+ :system
+ wicd-dbus-name
+ (wicd-dbus-path :daemon)
+ (wicd-dbus-name :daemon)
+ "ConnectResultsSent"
+ (lambda (s)
+   (message "Connexion " s)
+   (when (string= s "success")
+     (wicd-wireless-emphase-network))))
 
 (provide 'wicd-mode)
 ;;; wicd-mode.el ends here
